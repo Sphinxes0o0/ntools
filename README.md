@@ -1,6 +1,6 @@
 # ntools
 
-## netif_check
+## netif_check for linux
 
 check network interface status
 
@@ -11,3 +11,4 @@ dev: eno1, iff_up: UP, carrier_on: ON, running: RUNNING
  => usable: YES 
 
 ```
+

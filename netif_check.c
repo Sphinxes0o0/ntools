@@ -1,4 +1,4 @@
-#include <linux/if.h>        /* 定义 IFF_LOWER_UP / IFF_RUNNING */
+#include <linux/if.h>        /*  IFF_LOWER_UP / IFF_RUNNING */
 #include <linux/rtnetlink.h> /* RTM_* / IFLA_* / RTA_* */
 #include <stdbool.h>
 #include <string.h>
@@ -7,7 +7,7 @@
 #include <stdbool.h>
 #include <stdio.h>
 
-#undef  __USE_MISC          /* 关闭枚举 */
+#undef  __USE_MISC
 #include <net/if.h>
 #define __USE_MISC 
 
@@ -19,7 +19,6 @@ typedef struct {
 
 
 static int get_netif_state(const char *netif_name, nic_state_t *state) {
-
     unsigned idx = if_nametoindex(netif_name);
     if (!idx) {
         fprintf(stderr, "interface '%s' not exist\n", netif_name);
