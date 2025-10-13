@@ -1,6 +1,6 @@
 # ntools
 
-## netif_check 
+## 网络接口检查 
 
 check network interface status
 
@@ -17,3 +17,12 @@ dev: en0, iff_up: DOWN, carrier_on: OFF, running: NOT RUNNING
  => usable: NO
 ```
 
+## RAW_SOCKET 抓包
+使用RAW_SOCKET抓包, 并简单解析
+> tcpdump mini 版
+
+详情查看 raw_socket/README.md
+
+## snort/suricata rules 转binary
+将snort/suricata规则转换成二进制文件
+详情查看 rule2bin/README.md
