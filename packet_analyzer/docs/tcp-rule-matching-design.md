@@ -6,7 +6,7 @@ This document outlines the implementation plan for enhancing TCP packet parsing 
 ## Current State Analysis
 
 ### Existing TCP Parser ([`tcp_parser.h`](include/parsing/tcp_parser.h), [`tcp_parser.cpp`](src/parsing/tcp_parser.cpp))
-- ✅ Parses TCP headers and extracts port numbers, flags, sequence numbers
+[text](../tests)- ✅ Parses TCP headers and extracts port numbers, flags, sequence numbers
 - ✅ Implements protocol detection and validation
 - ✅ Returns structured parsing results with detailed findings
 
