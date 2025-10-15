@@ -1,0 +1,31 @@
+ids:
+  version: "1.0"
+  
+  capture:
+    type: "af_packet"
+    interface: "lo"
+    buffer_size: 65536
+    timeout_ms: 1000
+    snaplen: 65535
+    promiscuous: true
+    filter: ""
+    
+  protocols:
+    enabled:
+      - ethernet
+      - ipv4
+      - tcp
+      - udp
+      - icmp
+    
+  rules:
+    rule_files:
+      - 
+    auto_reload: true
+    reload_interval: 300
+
+  performance:
+    # Simplified to single-threaded processing
+    queue_size: 10000
+    batch_size: 100
+    cpu_affinity: false
