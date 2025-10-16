@@ -216,20 +216,7 @@ ids:
 | batch_size | integer | 100 | Packet batch size |
 | cpu_affinity | boolean | true | Enable CPU affinity for threads |
 
-### Environment Variables
-```bash
-# Set configuration file path
-export MINIIDS_CONFIG=/path/to/config.yaml
 
-# Set log level
-export MINIIDS_LOG_LEVEL=DEBUG
-
-# Set interface
-export MINIIDS_INTERFACE=eth0
-
-# Enable debug mode
-export MINIIDS_DEBUG=1
-```
 
 ## Rule Management
 
@@ -589,9 +576,6 @@ logging:
 # Run in debug mode
 ids -c config.yaml --debug
 
-# Or set environment variable
-export MINIIDS_DEBUG=1
-ids -c config.yaml
 ```
 
 #### Verbose Output

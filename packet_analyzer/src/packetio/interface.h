@@ -1,5 +1,5 @@
-#ifndef MINIIDS_PACKETIO_INTERFACE_H
-#define MINIIDS_PACKETIO_INTERFACE_H
+#ifndef PACKETIO_INTERFACE_H
+#define PACKETIO_INTERFACE_H
 
 #include "../../include/protocols/packet.h"
 #include "../../include/ids/config.h"
@@ -130,4 +130,4 @@ private:
 
 } // namespace ids
 
-#endif // MINIIDS_PACKETIO_INTERFACE_H
+#endif // PACKETIO_INTERFACE_H

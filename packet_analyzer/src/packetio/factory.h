@@ -1,5 +1,5 @@
-#ifndef MINIIDS_PACKETIO_FACTORY_H
-#define MINIIDS_PACKETIO_FACTORY_H
+#ifndef PACKETIO_FACTORY_H
+#define PACKETIO_FACTORY_H
 
 #include "interface.h"
 #include <memory>
@@ -40,4 +40,4 @@ private:
 
 } // namespace ids
 
-#endif // MINIIDS_PACKETIO_FACTORY_H
+#endif // PACKETIO_FACTORY_H

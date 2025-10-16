@@ -1,5 +1,5 @@
-#ifndef MINIIDS_UTILS_UTILS_H
-#define MINIIDS_UTILS_UTILS_H
+#ifndef UTILS_UTILS_H
+#define UTILS_UTILS_H
 
 #include <string>
 #include <vector>
@@ -108,4 +108,4 @@ void printVersion();
 } // namespace utils
 } // namespace ids
 
-#endif // MINIIDS_UTILS_UTILS_H
+#endif // UTILS_UTILS_H

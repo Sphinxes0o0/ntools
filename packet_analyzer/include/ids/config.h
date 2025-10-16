@@ -1,5 +1,5 @@
-#ifndef MINIIDS_CORE_CONFIG_H
-#define MINIIDS_CORE_CONFIG_H
+#ifndef CONFIG_H
+#define CONFIG_H
 
 #include "../../include/ids/common.h"
 #include <unordered_map>
@@ -648,4 +648,4 @@ struct PerformanceConfig {
 
 } // namespace ids
 
-#endif // MINIIDS_CORE_CONFIG_H
+#endif // CONFIG_H
