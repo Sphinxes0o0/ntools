@@ -17,8 +17,8 @@ include_directories(include)
 # 源文件
 set(SOURCES
     src/ids.cpp
-    src/capture/af_packet.cpp
-    src/capture/factory.cpp
+    src/packetio/af_packet.cpp
+    src/packetio/factory.cpp
     src/utils/utils.cpp
     src/utils/packet_formatter.cpp
     src/protocols/tcp.cpp

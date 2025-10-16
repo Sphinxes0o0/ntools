@@ -1,5 +1,5 @@
-#ifndef MINIIDS_CAPTURE_AF_PACKET_CAPTURE_H
-#define MINIIDS_CAPTURE_AF_PACKET_CAPTURE_H
+#ifndef MINIIDS_PACKETIO_AF_PACKET_CAPTURE_H
+#define MINIIDS_PACKETIO_AF_PACKET_CAPTURE_H
 
 #include "interface.h"
 #include <sys/socket.h>
@@ -152,4 +152,4 @@ private:
 
 } // namespace ids
 
-#endif // MINIIDS_CAPTURE_AF_PACKET_CAPTURE_H
+#endif // MINIIDS_PACKETIO_AF_PACKET_CAPTURE_H

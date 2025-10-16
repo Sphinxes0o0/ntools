@@ -1,4 +1,5 @@
 #include "../src/capture/capture_interface.h"
+#include "../src/packetio/interface.h"
 #include <iostream>
 #include <memory>
 

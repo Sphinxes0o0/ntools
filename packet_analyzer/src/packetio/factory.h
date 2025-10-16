@@ -1,5 +1,5 @@
-#ifndef MINIIDS_CAPTURE_FACTORY_H
-#define MINIIDS_CAPTURE_FACTORY_H
+#ifndef MINIIDS_PACKETIO_FACTORY_H
+#define MINIIDS_PACKETIO_FACTORY_H
 
 #include "interface.h"
 #include <memory>
@@ -40,4 +40,4 @@ private:
 
 } // namespace ids
 
-#endif // MINIIDS_CAPTURE_FACTORY_H
+#endif // MINIIDS_PACKETIO_FACTORY_H

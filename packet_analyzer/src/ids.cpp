@@ -1,13 +1,15 @@
 #include "ids.h"
+#include "packetio/factory.h"
+#include "protocols/protocol_parser.h"
+#include "protocols/tcp.h"
 #include <iostream>
-#include <thread>
-#include <chrono>
 #include <csignal>
+#include <cstring>
+#include <chrono>
+#include <thread>
 #include <memory>
 
 #include "ids/config.h"
-#include "capture/factory.h"
-#include "protocols/tcp.h"
 
 namespace ids {
 
@@ -189,7 +191,9 @@ void IDS::handleSignal(int signal) {
     switch (signal) {
         case SIGINT:
         case SIGTERM:
-            shutdown();
+            if (g_instance) {
+                g_instance->shutdown();
+            }
             break;
         default:
             break;
