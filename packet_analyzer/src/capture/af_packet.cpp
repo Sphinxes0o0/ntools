@@ -51,10 +51,10 @@ bool AFPacketCapture::initialize(const CaptureConfig& config) {
                 return false;
             }
         }
-        
+
         running_ = true;
         resetStats();
-        
+
         return true;
     } catch (const std::exception& e) {
         if (socket_fd_ != -1) {
@@ -76,7 +76,7 @@ void AFPacketCapture::shutdown() {
 
 std::unique_ptr<Packet> AFPacketCapture::capturePacket() {
     if (!running_ || socket_fd_ == -1) {
-
+        return nullptr;
     }
     
     struct pollfd pfd;
@@ -89,6 +89,7 @@ std::unique_ptr<Packet> AFPacketCapture::capturePacket() {
         if (errno == EINTR) {
             return nullptr; // Interrupted by signal
         }
+        return nullptr; // Error
     } else if (ret == 0) {
         return nullptr; // Timeout
     }
@@ -105,6 +106,7 @@ std::unique_ptr<Packet> AFPacketCapture::capturePacket() {
         if (errno == EAGAIN || errno == EINTR) {
             return nullptr; // Would block or interrupted
         }
+        return nullptr; // Error
     }
     
     if (received == 0) {
@@ -164,6 +166,7 @@ bool AFPacketCapture::setFilter(const std::string& filter) {
 bool AFPacketCapture::createSocket() {
     socket_fd_ = socket(AF_PACKET, SOCK_RAW, htons(ETH_P_ALL));
     if (socket_fd_ == -1) {
+        return false;
     }
     
     return true;
@@ -174,6 +177,7 @@ bool AFPacketCapture::bindToInterface() {
     interface_index_ = getInterfaceIndex(interface_name_);
     
     if (interface_index_ == -1) {
+        return false;
     }
     
     struct sockaddr_ll addr;
@@ -183,7 +187,7 @@ bool AFPacketCapture::bindToInterface() {
     addr.sll_protocol = htons(ETH_P_ALL);
     
     if (bind(socket_fd_, (struct sockaddr*)&addr, sizeof(addr)) == -1) {
-
+        return false;
     }
     
     return true;

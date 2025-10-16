@@ -577,3 +577,50 @@ sudo ids -c /etc/ids/ids.yaml
 4. **GUI Interface**: Web-based management interface
 5. **Cloud Integration**: Cloud-based rule updates
 6. **Container Support**: Docker and Kubernetes integration
+
+## 3. Protocol Parsing Enhancement
+
+### 3.1 Current State Analysis
+Currently, the TCP parser directly handles Ethernet and IP headers, which violates the principle of layered protocol parsing. This approach leads to code duplication and makes it difficult to extend to other protocols.
+
+The current TCP parser implementation:
+1. Checks if the packet contains an Ethernet frame
+2. Verifies the EtherType indicates an IPv4 packet
+3. Confirms the IP protocol field indicates TCP
+4. Parses the TCP header fields
+
+This approach works for basic TCP parsing but has limitations:
+- Code duplication across different protocol parsers
+- Difficulty in extending to other protocols (UDP, ICMP, etc.)
+- Violation of separation of concerns principle
+- Harder to test individual protocol layers
+
+### 3.2 Refactoring Plan
+1. **Create Ethernet Parser**:
+   - Implement Ethernet frame header parsing
+   - Extract MAC addresses and EtherType
+   - Identify next layer protocol
+
+2. **Create IP Parser**:
+   - Implement IPv4 header parsing
+   - Extract source and destination IP addresses
+   - Identify transport layer protocol (TCP/UDP/ICMP)
+   - Calculate header length for payload offset
+
+3. **Refactor TCP Parser**:
+   - Modify to only parse TCP segment
+   - Remove direct Ethernet and IP header handling
+   - Work with parsed IP information
+
+4. **Implement Protocol Manager**:
+   - Coordinate layered parsing process
+   - Manage parser registration and execution
+   - Build complete protocol stack information
+
+### 3.3 Implementation Steps
+1. Create Ethernet parser class with appropriate interfaces
+2. Create IP parser class with IPv4 support
+3. Refactor TCP parser to work in layered fashion
+4. Implement protocol manager to coordinate parsing
+5. Update IDS core to use new layered parsing approach
+6. Test with various packet types to ensure compatibility

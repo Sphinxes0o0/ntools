@@ -52,7 +52,7 @@ graph TB
 class ICaptureModule {
 public:
     virtual bool initialize(const CaptureConfig& config) = 0;
-    virtual Packet* capturePacket() = 0;
+    virtual std::unique_ptr<Packet> capturePacket() = 0;
     virtual void shutdown() = 0;
     virtual ~ICaptureModule() = default;
 };
@@ -66,6 +66,21 @@ public:
 - Internet Layer: IP, ICMP
 - Transport Layer: TCP, UDP
 - Application Layer: HTTP, DNS (basic)
+
+Current Implementation Status:
+The current implementation uses a simplified approach where parsers directly work on raw packets. 
+Each parser is responsible for identifying and parsing its specific protocol within the packet.
+
+For example, the TCP parser currently:
+1. Checks if the packet contains an Ethernet frame
+2. Verifies the EtherType indicates an IPv4 packet
+3. Confirms the IP protocol field indicates TCP
+4. Parses the TCP header fields
+
+This approach will be refactored to follow a strict layered parsing model where:
+1. Ethernet parser extracts Ethernet frame information
+2. IP parser extracts IP header information
+3. TCP parser works with parsed IP information to extract TCP fields
 
 **Plugin Architecture**:
 ```cpp

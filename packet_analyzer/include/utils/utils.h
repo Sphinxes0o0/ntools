@@ -4,6 +4,10 @@
 #include <string>
 #include <vector>
 #include <cstdint>
+// Forward declaration to avoid circular dependency
+namespace ids {
+    class Config;
+}
 
 namespace ids {
 namespace utils {
@@ -52,6 +56,54 @@ bool endsWith(const std::string& str, const std::string& suffix);
 std::string toHex(const uint8_t* data, size_t length);
 std::vector<uint8_t> fromHex(const std::string& hex);
 std::string formatHexDump(const uint8_t* data, size_t length, size_t bytes_per_line);
+
+// Signal handling utilities
+typedef void (*SignalHandler)(int signal);
+void setupSignalHandler(int signal, SignalHandler handler);
+void setupStandardSignalHandlers(SignalHandler handler);
+
+/**
+ * @brief Structure to hold command line options
+ */
+struct CommandLineOptions {
+    std::string config_file = "/etc/ids/ids.yaml";
+    std::string interface;
+    std::vector<std::string> rule_files;
+    std::string log_level;
+    std::string output_format;
+    bool debug_mode = false;
+    bool save_config = false;  // Whether to save the config file after applying CLI options
+};
+
+/**
+ * @brief Parse command line arguments
+ * @param argc Argument count
+ * @param argv Argument vector
+ * @param options Parsed command line options
+ * @return 0 on success, 1 on error, -1 to exit (help/version)
+ */
+int parseCommandLine(int argc, char* argv[], CommandLineOptions& options);
+
+/**
+ * @brief Process command line options and configuration
+ * @param argc Argument count
+ * @param argv Argument vector
+ * @param config Configuration object to populate
+ * @param options Command line options (output)
+ * @return 0 on success, 1 on error, -1 to exit (help/version)
+ */
+int processConfiguration(int argc, char* argv[], ids::Config& config, CommandLineOptions& options);
+
+/**
+ * @brief Print usage information
+ * @param program_name Program name
+ */
+void printUsage(const char* program_name);
+
+/**
+ * @brief Print version information
+ */
+void printVersion();
 
 } // namespace utils
 } // namespace ids

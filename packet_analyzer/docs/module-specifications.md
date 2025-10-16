@@ -1,496 +1,217 @@
-# IDS Module Specifications
+# Module Specifications
 
-## Core Framework Interfaces
+This document provides detailed specifications for each module in the packet analyzer system.
 
-### Packet Structure
+## 1. Core Module
+
+### 1.1 Overview
+The core module is the main entry point and orchestrator for the entire IDS system. It manages the initialization of all other modules, controls the main processing loop, and handles system shutdown.
+
+### 1.2 Responsibilities
+- System initialization and configuration loading
+- Module coordination and lifecycle management
+- Main packet processing loop
+- Signal handling for graceful shutdown
+- Statistics collection and reporting
+
+### 1.3 Interface Design
 ```cpp
-struct Packet {
-    uint8_t* data;          // Raw packet data
-    size_t length;          // Packet length in bytes
-    uint32_t capture_time;  // Capture timestamp (seconds)
-    uint32_t capture_usec;  // Capture timestamp (microseconds)
-    uint32_t interface_index; // Network interface index
-    uint16_t protocol;      // Link layer protocol type
-};
-```
-
-### Event System
-```cpp
-enum class EventType {
-    PACKET_CAPTURED,
-    PROTOCOL_DETECTED,
-    RULE_MATCHED,
-    ALERT_GENERATED,
-    ERROR_OCCURRED
-};
-
-struct Event {
-    EventType type;
-    uint32_t timestamp;
-    std::string source;
-    std::shared_ptr<void> data;
-};
-```
-
-## Traffic Capture Module Specification
-
-### CaptureConfig Structure
-```cpp
-struct CaptureConfig {
-    std::string interface;      // Network interface name
-    size_t buffer_size;         // Capture buffer size
-    int timeout_ms;             // Capture timeout in milliseconds
-    int snaplen;               // Maximum bytes per packet
-    bool promiscuous;          // Promiscuous mode
-    std::string filter;        // BPF filter expression
-};
-```
-
-### AF_PACKET Implementation
-```cpp
-class AFPacketCapture : public ICaptureModule {
-private:
-    int socket_fd_;
-    CaptureConfig config_;
-    std::vector<uint8_t> buffer_;
-    
+class IDS {
 public:
-    bool initialize(const CaptureConfig& config) override;
-    Packet* capturePacket() override;
-    void shutdown() override;
+    IDS();
+    ~IDS();
+    
+    bool initialize(const std::string& config_file);
+    bool initialize(const Config& config);
+    void run();
+    void shutdown();
+    bool isRunning() const;
+    void handleSignal(int signal);
     
 private:
-    bool createSocket();
-    bool bindToInterface();
-    bool setSocketOptions();
+    std::atomic<bool> running_;
+    std::atomic<bool> paused_;
+    std::atomic<bool> shutdown_called_;
+    std::chrono::steady_clock::time_point start_time_;
+    Config config_;
+    
+    // Capture module
+    std::unique_ptr<ids::ICaptureModule> capture_module_;
+    
+    // Protocol parsers
+    std::vector<std::unique_ptr<ids::ProtocolParser>> protocol_parsers_;
+
+    // Rule components
+    ids::RuleMatcher rule_matcher_;
+    ids::RuleParser rule_parser_;
+
+    bool initializeModules();
+    void processingLoop();
+    void processPacket(const Packet& packet);
+    
+    // Protocol parsing functions
+    void initializeProtocolParsers();
+    std::vector<ids::ParsingResult> parsePacket(const Packet& packet);
 };
 ```
 
-### Extensibility Interface
+### 1.4 Implementation Requirements
+- Must handle system signals gracefully (SIGINT, SIGTERM)
+- Must provide clean shutdown mechanism
+- Must support configuration reloading
+- Must collect and report system statistics
+
+## 2. Capture Module
+
+### 2.1 Overview
+The capture module is responsible for capturing raw network packets from network interfaces. It provides a standardized interface that can be implemented with different capture mechanisms.
+
+### 2.2 Design Principles
+- Support multiple capture backends (AF_PACKET, libpcap, eBPF)
+- Provide unified interface for packet capture
+- Handle capture errors gracefully
+- Support configuration-based initialization
+
+### 2.3 Interface Design
 ```cpp
-class CaptureFactory {
+class ICaptureModule {
 public:
-    static std::unique_ptr<ICaptureModule> create(const std::string& type);
-    
-    // Future extensions:
-    // - LibpcapCapture
-    // - EBpfCapture
-    // - DPDKCapture
-};
-```
-
-## Protocol Parsing Module Specification
-
-### Protocol Layer Enumeration
-```cpp
-enum class ProtocolLayer {
-    LINK_LAYER = 1,
-    NETWORK_LAYER = 2,
-    TRANSPORT_LAYER = 3,
-    APPLICATION_LAYER = 4
-};
-```
-
-### Protocol Data Base Class
-```cpp
-class ProtocolData {
-public:
-    virtual ~ProtocolData() = default;
-    virtual std::string toString() const = 0;
-    virtual ProtocolLayer getLayer() const = 0;
-    virtual std::string getProtocolName() const = 0;
-    
-    std::shared_ptr<ProtocolData> next_layer;
-    size_t header_length;
-    size_t payload_length;
-};
-```
-
-### Ethernet Protocol Implementation
-```cpp
-class EthernetData : public ProtocolData {
-public:
-    uint8_t dst_mac[6];
-    uint8_t src_mac[6];
-    uint16_t ether_type;
-    
-    std::string toString() const override;
-    ProtocolLayer getLayer() const override { return ProtocolLayer::LINK_LAYER; }
-    std::string getProtocolName() const override { return "Ethernet"; }
-};
-```
-
-### IP Protocol Implementation
-```cpp
-class IPv4Data : public ProtocolData {
-public:
-    uint8_t version;
-    uint8_t header_length;
-    uint8_t tos;
-    uint16_t total_length;
-    uint16_t identification;
-    uint8_t flags;
-    uint16_t fragment_offset;
-    uint8_t ttl;
-    uint8_t protocol;
-    uint16_t checksum;
-    uint32_t src_ip;
-    uint32_t dst_ip;
-    
-    std::string toString() const override;
-    ProtocolLayer getLayer() const override { return ProtocolLayer::NETWORK_LAYER; }
-    std::string getProtocolName() const override { return "IPv4"; }
-};
-```
-
-### TCP Protocol Implementation
-```cpp
-class TCPData : public ProtocolData {
-public:
-    uint16_t src_port;
-    uint16_t dst_port;
-    uint32_t seq_num;
-    uint32_t ack_num;
-    uint8_t data_offset;
-    uint8_t flags;
-    uint16_t window_size;
-    uint16_t checksum;
-    uint16_t urgent_ptr;
-    
-    // TCP flags
-    bool fin, syn, rst, psh, ack, urg;
-    
-    std::string toString() const override;
-    ProtocolLayer getLayer() const override { return ProtocolLayer::TRANSPORT_LAYER; }
-    std::string getProtocolName() const override { return "TCP"; }
-};
-```
-
-### Protocol Plugin Manager
-```cpp
-class ProtocolPluginManager {
-private:
-    std::vector<std::unique_ptr<IProtocolPlugin>> plugins_;
-    
-public:
-    void registerPlugin(std::unique_ptr<IProtocolPlugin> plugin);
-    std::shared_ptr<ProtocolData> parsePacket(const Packet& packet);
-    void loadDefaultPlugins();
-    
-    // Plugin discovery and loading
-    void loadPluginsFromDirectory(const std::string& path);
-};
-```
-
-## Logging Module Specification
-
-### Log Levels
-```cpp
-enum class LogLevel {
-    DEBUG = 0,
-    INFO = 1,
-    WARNING = 2,
-    ERROR = 3,
-    ALERT = 4
-};
-```
-
-### Log Configuration
-```cpp
-struct LogConfig {
-    LogLevel level;
-    std::string format;        // "tcpdump", "json", "csv"
-    std::string output;        // "console", "file", "syslog"
-    std::string file_path;
-    bool enable_packet_dump;
-    bool enable_hex_dump;
-    size_t max_file_size;
-    int max_files;
-};
-```
-
-### Tcpdump-style Formatter
-```cpp
-class TcpdumpFormatter : public ILogFormatter {
-public:
-    std::string formatPacket(const Packet& packet, 
-                           const std::vector<std::shared_ptr<ProtocolData>>& protocols) override;
-    
-private:
-    std::string formatTimestamp(uint32_t sec, uint32_t usec);
-    std::string formatEthernet(const EthernetData& eth);
-    std::string formatIPv4(const IPv4Data& ip);
-    std::string formatTCP(const TCPData& tcp);
-    std::string formatHexDump(const uint8_t* data, size_t length);
-};
-```
-
-### Log Message Structure
-```cpp
-struct LogMessage {
-    LogLevel level;
-    uint32_t timestamp_sec;
-    uint32_t timestamp_usec;
-    std::string source;
-    std::string message;
-    std::shared_ptr<Packet> packet;
-    std::vector<std::shared_ptr<ProtocolData>> protocols;
-    std::unordered_map<std::string, std::string> metadata;
-};
-```
-
-## Rule Engine Module Specification
-
-### Rule Structure
-```cpp
-struct Rule {
-    std::string id;
-    std::string description;
-    std::string protocol;
-    std::string src_ip;
-    std::string dst_ip;
-    uint16_t src_port;
-    uint16_t dst_port;
-    std::string direction;  // "->", "<-", "<>"
-    std::vector<RuleOption> options;
-    RuleAction action;
-    bool enabled;
-};
-```
-
-### Rule Options
-```cpp
-struct RuleOption {
-    std::string keyword;    // "content", "depth", "offset", "pcre", etc.
-    std::string value;
-    bool negated;          // "!" prefix
-};
-
-enum class RuleAction {
-    ALERT,
-    LOG,
-    DROP,
-    PASS,
-    REJECT
-};
-```
-
-### Rule Parser
-```cpp
-class RuleParser {
-public:
-    std::vector<Rule> parseRuleFile(const std::string& file_path);
-    Rule parseRule(const std::string& rule_text);
-    
-private:
-    Rule parseRuleLine(const std::string& line);
-    std::vector<RuleOption> parseOptions(const std::string& options_str);
-    bool validateRule(const Rule& rule);
-};
-```
-
-### Rule Matcher
-```cpp
-class RuleMatcher {
-private:
-    std::vector<Rule> rules_;
-    
-public:
-    void loadRules(const std::vector<Rule>& rules);
-    std::vector<RuleMatch> match(const std::vector<std::shared_ptr<ProtocolData>>& protocols);
-    
-private:
-    bool matchProtocol(const Rule& rule, const ProtocolData& proto);
-    bool matchIP(const std::string& rule_ip, uint32_t packet_ip);
-    bool matchPort(uint16_t rule_port, uint16_t packet_port);
-    bool matchContent(const Rule& rule, const Packet& packet);
-};
-```
-
-### Rule Match Result
-```cpp
-struct RuleMatch {
-    const Rule* rule;
-    double confidence;
-    std::string matched_content;
-    std::unordered_map<std::string, std::string> details;
-};
-```
-
-## Event Manager Specification
-
-### Event Manager Interface
-```cpp
-class EventManager {
-private:
-    std::vector<std::shared_ptr<IModule>> modules_;
-    std::queue<Event> event_queue_;
-    std::mutex queue_mutex_;
-    std::condition_variable queue_cv_;
-    bool running_;
-    
-public:
-    void registerModule(std::shared_ptr<IModule> module);
-    void publishEvent(const Event& event);
-    void start();
-    void stop();
-    
-private:
-    void eventLoop();
-    void processEvent(const Event& event);
-};
-```
-
-### Module Interface
-```cpp
-class IModule {
-public:
-    virtual std::string getName() const = 0;
-    virtual bool initialize(const Config& config) = 0;
-    virtual void handleEvent(const Event& event) = 0;
+    virtual bool initialize(const CaptureConfig& config) = 0;
+    virtual std::unique_ptr<Packet> capturePacket() = 0;
     virtual void shutdown() = 0;
-    virtual ~IModule() = default;
+    virtual ~ICaptureModule() = default;
 };
 ```
 
-## Configuration System Specification
+### 2.4 Implementation Requirements
+- Must handle network interface binding
+- Must support promiscuous mode configuration
+- Must provide packet metadata (timestamps, interface info)
+- Must handle capture buffer management
+- Must support packet filtering
 
-### Configuration Structure
+## 3. Protocol Parsing Module
+
+### 3.1 Overview
+The protocol parsing module is responsible for dissecting network packets according to the TCP/IP protocol stack. It follows a layered approach where each protocol layer is parsed independently, and the results are combined to form a complete protocol stack view.
+
+### 3.2 Design Principles
+1. **Layered Parsing**: Each protocol layer is parsed by a dedicated parser
+2. **Modularity**: Each parser is implemented as a separate class
+3. **Extensibility**: New protocol parsers can be added without modifying existing code
+4. **Independence**: Each parser only handles its specific protocol layer
+5. **Consistency**: All parsers implement the same interface for uniform handling
+
+### 3.3 Current Implementation Status
+The current implementation uses a simplified approach where parsers directly work on raw packets. 
+Each parser is responsible for identifying and parsing its specific protocol within the packet.
+
+For example, the TCP parser currently:
+1. Checks if the packet contains an Ethernet frame
+2. Verifies the EtherType indicates an IPv4 packet
+3. Confirms the IP protocol field indicates TCP
+4. Parses the TCP header fields
+
+This approach will be refactored to follow a strict layered parsing model where:
+1. Ethernet parser extracts Ethernet frame information
+2. IP parser extracts IP header information
+3. TCP parser works with parsed IP information to extract TCP fields
+
+### 3.4 Future Layered Architecture
+1. **Link Layer (Ethernet)**:
+   - Parse Ethernet frame headers
+   - Extract source and destination MAC addresses
+   - Identify EtherType for next layer protocol
+
+2. **Network Layer (IP)**:
+   - Parse IP headers based on EtherType
+   - Extract source and destination IP addresses
+   - Identify transport layer protocol
+   - Calculate header length and payload offset
+
+3. **Transport Layer (TCP/UDP)**:
+   - Parse transport layer headers
+   - Extract source and destination ports
+   - Parse protocol-specific fields (TCP flags, sequence numbers, etc.)
+
+4. **Application Layer (Optional)**:
+   - Parse application layer data when available
+   - Handle protocol-specific parsing (HTTP headers, DNS records, etc.)
+
+### 3.5 Interface Design
 ```cpp
-class Config {
-private:
-    std::unordered_map<std::string, std::any> settings_;
-    
+class IProtocolParser {
 public:
-    template<typename T>
-    T get(const std::string& key, const T& default_value) const;
-    
-    template<typename T>
-    void set(const std::string& key, const T& value);
-    
-    bool loadFromFile(const std::string& file_path);
-    bool loadFromString(const std::string& json_str);
-    std::string toString() const;
+    virtual ProtocolType getProtocolType() const = 0;
+    virtual bool canParse(const Packet& packet) const = 0;
+    virtual ParsingResult parse(const Packet& packet) const = 0;
+    virtual ~IProtocolParser() = default;
 };
 ```
 
-### Configuration Schema
-```yaml
-ids:
-  version: "1.0"
-  
-  capture:
-    interface: "eth0"
-    buffer_size: 65536
-    timeout_ms: 1000
-    snaplen: 65535
-    promiscuous: true
-    filter: ""
-    
-  protocols:
-    enabled:
-      - ethernet
-      - ipv4
-      - tcp
-      - udp
-      - icmp
-    plugins_path: "/usr/lib/ids/plugins"
-    
-  logging:
-    level: "INFO"
-    format: "tcpdump"
-    output: "console"
-    file_path: "/var/log/ids.log"
-    max_file_size: 10485760  # 10MB
-    max_files: 10
-    enable_packet_dump: true
-    enable_hex_dump: true
-    
-  rules:
-    rule_files:
-      - "/etc/ids/rules/local.rules"
-    auto_reload: true
-    reload_interval: 300  # seconds
-    
-  performance:
-    worker_threads: 4
-    queue_size: 10000
-    batch_size: 100
-    cpu_affinity: true
-```
+### 3.6 Implementation Requirements
+1. Each parser must only access its own protocol layer data
+2. Parsers must not modify the original packet data
+3. Parsers should handle malformed packets gracefully
+4. Parsing results should include all relevant protocol information
+5. Parsers must be thread-safe if used in multi-threaded environments
 
-## Error Handling Strategy
+## 4. Rule Engine Module
 
-### Error Codes
+### 4.1 Overview
+The rule engine module is responsible for parsing rule definitions and matching them against parsed packet data. It provides alerting capabilities when rules are matched.
+
+### 4.2 Design Principles
+- Support Snort-like rule syntax
+- Provide efficient rule matching algorithms
+- Support rule categorization and grouping
+- Enable dynamic rule reloading
+
+### 4.3 Interface Design
 ```cpp
-enum class ErrorCode {
-    SUCCESS = 0,
-    INVALID_CONFIG = 100,
-    PERMISSION_DENIED = 101,
-    INTERFACE_NOT_FOUND = 102,
-    SOCKET_ERROR = 103,
-    PACKET_CAPTURE_ERROR = 104,
-    PROTOCOL_PARSE_ERROR = 105,
-    RULE_PARSE_ERROR = 106,
-    MEMORY_ALLOCATION_ERROR = 107,
-    FILE_NOT_FOUND = 108,
-    PLUGIN_LOAD_ERROR = 109
+class IRuleMatcher {
+public:
+    virtual bool initialize(const Config& config) = 0;
+    virtual std::vector<RuleMatch> matchPacket(const PacketInfo& packet_info) = 0;
+    virtual void addRules(const std::vector<Rule>& rules) = 0;
+    virtual ~IRuleMatcher() = default;
 };
 ```
 
-### Exception Classes
+### 4.4 Implementation Requirements
+- Must support rule parsing from files
+- Must provide efficient pattern matching
+- Must handle rule compilation and optimization
+- Must support rule metadata (SID, revision, classification)
+- Must provide alert generation capabilities
+
+## 5. Logging Module
+
+### 5.1 Overview
+The logging module is responsible for recording system events, packet information, and alerts. It supports multiple output formats and destinations.
+
+### 5.2 Design Principles
+- Support multiple log levels (DEBUG, INFO, WARN, ERROR)
+- Provide configurable output formats
+- Support multiple output destinations (console, file, network)
+- Ensure thread-safe logging operations
+
+### 5.3 Interface Design
 ```cpp
-class IDSException : public std::exception {
-protected:
-    ErrorCode code_;
-    std::string message_;
-    
+class ILogger {
 public:
-    IDSException(ErrorCode code, const std::string& message);
-    const char* what() const noexcept override;
-    ErrorCode getCode() const { return code_; }
-};
-
-class CaptureException : public IDSException {
-public:
-    CaptureException(ErrorCode code, const std::string& message);
-};
-
-class ProtocolException : public IDSException {
-public:
-    ProtocolException(ErrorCode code, const std::string& message);
-};
-
-class RuleException : public IDSException {
-public:
-    RuleException(ErrorCode code, const std::string& message);
+    virtual void log(LogLevel level, const std::string& message) = 0;
+    virtual void debug(const std::string& message) = 0;
+    virtual void info(const std::string& message) = 0;
+    virtual void warn(const std::string& message) = 0;
+    virtual void error(const std::string& message) = 0;
+    virtual ~ILogger() = default;
 };
 ```
 
-## Performance Metrics
-
-### Metrics Collection
-```cpp
-struct PerformanceMetrics {
-    uint64_t packets_captured;
-    uint64_t packets_processed;
-    uint64_t packets_dropped;
-    uint64_t alerts_generated;
-    uint64_t rules_evaluated;
-    uint64_t bytes_processed;
-    double average_processing_time;
-    double packets_per_second;
-    double bytes_per_second;
-    std::chrono::steady_clock::time_point start_time;
-};
-```
-
-### Metrics Reporter
-```cpp
-class MetricsReporter {
-public:
-    void update(const std::string& metric, double value);
-    void increment(const std::string& metric);
-    PerformanceMetrics getSnapshot() const;
-    std::string getReport() const;
-};
+### 5.4 Implementation Requirements
+- Must support tcpdump-style packet output
+- Must provide configurable log rotation
+- Must handle concurrent logging from multiple threads
+- Must support structured logging formats
+- Must provide performance-efficient logging operations

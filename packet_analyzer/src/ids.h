@@ -1,22 +1,22 @@
-#ifndef MINIIDS_MINIIDS_H
-#define MINIIDS_MINIIDS_H
+#ifndef MINIIDS_IDS_H
+#define MINIIDS_IDS_H
 
-#include "core/config.h"
-#include "capture/interface.h"
-#include "../include/parsing/matcher.h"
-#include <map>
 #include <memory>
 #include <atomic>
-#include <thread>
-#include <vector>
+#include <chrono>
 #include <mutex>
+#include <map>
+#include <vector>
+
+#include "ids/config.h"
+#include "parsing/packet.h"
+#include "capture/interface.h"
+#include "capture/factory.h"
+#include "parsing/protocol_parser.h"
+#include "rule/matcher.h"
+#include "rule/parser.h"
 
 namespace ids {
-
-// Forward declarations
-class ProtocolManager;
-class RuleParser;
-class RuleMatcher;
 
 /**
  * @brief Main IDS application class
@@ -48,12 +48,12 @@ public:
     bool initialize(const Config& config);
     
     /**
-     * @brief Run main processing loop
+     * @brief Start the IDS engine
      */
     void run();
     
     /**
-     * @brief Shutdown IDS
+     * @brief Shutdown the IDS engine
      */
     void shutdown();
     
@@ -64,133 +64,37 @@ public:
     bool isRunning() const;
     
     /**
-     * @brief Check if IDS is paused
-     * @return true if paused, false otherwise
-     */
-    bool isPaused() const;
-    
-    /**
-     * @brief Pause processing
-     */
-    void pause();
-    
-    /**
-     * @brief Resume processing
-     */
-    void resume();
-    
-    /**
-     * @brief Reload configuration
-     * @param config_file Path to new configuration file
-     * @return true if reload successful, false otherwise
-     */
-    bool reloadConfig(const std::string& config_file);
-    
-    /**
-     * @brief Handle system signal
+     * @brief Handle system signals
      * @param signal Signal number
      */
     void handleSignal(int signal);
     
-    /**
-     * @brief Setup signal handlers
-     */
-    static void setupSignalHandlers();
-    
-    // Module access - removed LogManager for simplicity
-    ICaptureModule* getCaptureModule() const { return capture_module_.get(); }
-    ProtocolManager* getProtocolManager() const { return protocol_manager_.get(); }
-    RuleMatcher* getRuleMatcher() const { return rule_matcher_.get(); }
-    
-    /**
-     * @brief System statistics
-     */
-    struct SystemStats {
-        uint64_t packets_processed;
-        uint64_t alerts_generated;
-        uint64_t rules_matched;
-        double uptime_seconds;
-        double packets_per_second;
-        double average_processing_time;
-        std::map<std::string, uint64_t> protocol_counts;
-        std::map<std::string, uint64_t> alert_counts;
-        
-        SystemStats() 
-            : packets_processed(0), alerts_generated(0), rules_matched(0),
-              uptime_seconds(0.0), packets_per_second(0.0), average_processing_time(0.0) {}
-    };
-    
-    /**
-     * @brief Get system statistics
-     * @return Current system statistics
-     */
-    SystemStats getStats() const;
-    
-    /**
-     * @brief Get statistics as JSON string
-     * @return JSON representation of statistics
-     */
-    std::string getStatsJSON() const;
-    
-    /**
-     * @brief Reset statistics
-     */
-    void resetStats();
-    
-    /**
-     * @brief Initialize components
-     */
-    void initialize_components();
-
 private:
-    /**
-     * @brief Initialize modules
-     * @return true if successful, false otherwise
-     */
-    bool initializeModules();
-    
-    /**
-     * @brief Process a single packet
-     * @param packet Packet to process
-     */
-    void processPacket(const Packet& packet);
-    
-    /**
-     * @brief Handle rule match alert
-     * @param match Rule match result
-     * @param packet Original packet
-     */
-    void handleAlert(const RuleMatch& match, const Packet& packet);
-    
-    /**
-     * @brief Main processing loop - single threaded for simplicity
-     */
-    void processingLoop();
-    
-    /**
-     * @brief Update system statistics
-     */
-    void updateStats();
-    
-    // Configuration
-    Config config_;
-    
-    // Module instances - removed LogManager for simplicity
-    std::unique_ptr<ICaptureModule> capture_module_;
-    std::unique_ptr<ProtocolManager> protocol_manager_;
-    std::unique_ptr<RuleParser> rule_parser_;
-    std::unique_ptr<RuleMatcher> rule_matcher_;
-    
-    // State
     std::atomic<bool> running_;
     std::atomic<bool> paused_;
+    std::atomic<bool> shutdown_called_;
     std::chrono::steady_clock::time_point start_time_;
+    Config config_;
     
-    // Statistics
-    mutable std::mutex stats_mutex_;
-    SystemStats stats_;
+    // Capture module
+    std::unique_ptr<ids::ICaptureModule> capture_module_;
+    
+    // Protocol parsers
+    std::vector<std::unique_ptr<ids::ProtocolParser>> protocol_parsers_;
+
+    // Rule components
+    ids::RuleMatcher rule_matcher_;
+    ids::RuleParser rule_parser_;
+
+    bool initializeModules();
+    void processingLoop();
+    void processPacket(const Packet& packet);
+    
+    // Protocol parsing functions
+    void initializeProtocolParsers();
+    std::vector<ids::ParsingResult> parsePacket(const Packet& packet);
 };
 
-} // namespace IDS
+} // namespace ids
 
-#endif // MINIIDS_MINIIDS_H
+#endif // MINIIDS_IDS_H

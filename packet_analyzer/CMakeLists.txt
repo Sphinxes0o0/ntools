@@ -16,16 +16,15 @@ include_directories(include)
 
 # 源文件
 set(SOURCES
-    src/main.cpp
     src/ids.cpp
     src/capture/af_packet.cpp
     src/capture/factory.cpp
-    src/core/utils.cpp
+    src/utils/utils.cpp
     src/utils/packet_formatter.cpp
     src/parsing/tcp.cpp
-    src/parsing/parser.cpp
-    src/parsing/matcher.cpp
     src/parsing/info_extractor.cpp
+    src/rule/parser.cpp
+    src/rule/matcher.cpp
 )
 
 # 核心库

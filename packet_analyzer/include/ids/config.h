@@ -8,6 +8,12 @@
 #include <sstream>
 #include <iostream>
 #include <typeinfo>
+#include <algorithm>
+#include <vector>
+#include <string>
+#include <limits>
+#include <utility>
+#include "../include/utils/utils.h"
 
 namespace ids {
 
@@ -365,9 +371,51 @@ public:
      * @return true if valid, false otherwise
      */
     bool validate() const {
-        // No required keys validation since we simplified the architecture
-        // The only truly required configuration is whatever the modules need
-        return true;
+        validation_errors_.clear();
+        
+        // Validate capture configuration
+        if (hasKey("capture.interface")) {
+            std::string interface = get<std::string>("capture.interface", "");
+            if (interface.empty()) {
+                validation_errors_.push_back("Capture interface cannot be empty");
+            }
+        }
+        
+        if (hasKey("capture.timeout_ms")) {
+            int timeout = get<int>("capture.timeout_ms", 1000);
+            if (timeout < 0) {
+                validation_errors_.push_back("Capture timeout must be non-negative");
+            }
+        }
+        
+        if (hasKey("capture.snaplen")) {
+            int snaplen = get<int>("capture.snaplen", 65535);
+            if (snaplen <= 0 || snaplen > 65535) {
+                validation_errors_.push_back("Capture snaplen must be between 1 and 65535");
+            }
+        }
+        
+        // Validate logging configuration
+        if (hasKey("logging.level")) {
+            std::string level = get<std::string>("logging.level", "");
+            std::vector<std::string> valid_levels = {"DEBUG", "INFO", "WARNING", "ERROR", "ALERT"};
+            if (std::find(valid_levels.begin(), valid_levels.end(), level) == valid_levels.end()) {
+                validation_errors_.push_back("Invalid logging level: " + level);
+            }
+        }
+        
+        if (hasKey("logging.format")) {
+            std::string format = get<std::string>("logging.format", "");
+            std::vector<std::string> valid_formats = {"tcpdump", "json", "csv"};
+            if (std::find(valid_formats.begin(), valid_formats.end(), format) == valid_formats.end()) {
+                validation_errors_.push_back("Invalid logging format: " + format);
+            }
+        }
+        
+        // Validate rules configuration
+        // Note: rule_files would need special handling for arrays
+        
+        return validation_errors_.empty();
     }
     
     /**
@@ -375,12 +423,7 @@ public:
      * @return Vector of validation error messages
      */
     std::vector<std::string> getValidationErrors() const {
-        std::vector<std::string> errors;
-        
-        // No required keys validation since we simplified the architecture
-        // All logging configuration validation removed since LogManager was eliminated
-        
-        return errors;
+        return validation_errors_;
     }
     
     /**
@@ -399,17 +442,43 @@ public:
     }
     
     /**
-     * @brief Merge another configuration into this one
-     * @param other Configuration to merge
+     * @brief Apply command line options to configuration
+     * @param options Command line options to apply
      */
-    void merge(const Config& other) {
-        for (const auto& [key, value] : other.settings_) {
-            settings_[key] = value;
+    void applyCommandLineOptions(const utils::CommandLineOptions& options) {
+        if (!options.interface.empty()) {
+            set("capture.interface", options.interface);
         }
+        if (!options.log_level.empty()) {
+            set("logging.level", options.log_level);
+        }
+        if (!options.output_format.empty()) {
+            set("logging.format", options.output_format);
+        }
+        if (options.debug_mode) {
+            set("logging.level", "DEBUG");
+        }
+        
+        // Add rule files from command line
+        if (!options.rule_files.empty()) {
+            // Note: This would need special handling for arrays in the config system
+            // For now, we'll just set the first rule file
+            set("rules.rule_files.0", options.rule_files[0]);
+        }
+    }
+    
+    /**
+     * @brief Save configuration to the specified file
+     * @param filepath Path to save configuration file
+     * @return true if saved successfully, false otherwise
+     */
+    bool saveConfig(const std::string& filepath) const {
+        return saveToFile(filepath);
     }
 
 private:
     std::unordered_map<std::string, std::any> settings_;
+    mutable std::vector<std::string> validation_errors_;
 };
 
 // Configuration structures for specific components
