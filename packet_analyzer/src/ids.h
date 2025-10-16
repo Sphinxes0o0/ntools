@@ -9,10 +9,10 @@
 #include <vector>
 
 #include "ids/config.h"
-#include "parsing/packet.h"
+#include "protocols/packet.h"
 #include "capture/interface.h"
 #include "capture/factory.h"
-#include "parsing/protocol_parser.h"
+#include "protocols/protocol_parser.h"
 #include "rule/matcher.h"
 #include "rule/parser.h"
 

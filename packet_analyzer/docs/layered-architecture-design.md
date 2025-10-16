@@ -100,42 +100,6 @@ public:
 
 **Purpose**: Parse and identify network protocols in layered fashion
 
-**Current Implementation Status**:
-The current implementation uses a simplified approach where parsers directly work on raw packets. 
-Each parser is responsible for identifying and parsing its specific protocol within the packet.
-
-For example, the TCP parser currently:
-1. Checks if the packet contains an Ethernet frame
-2. Verifies the EtherType indicates an IPv4 packet
-3. Confirms the IP protocol field indicates TCP
-4. Parses the TCP header fields
-
-This approach will be refactored to follow a strict layered parsing model where:
-1. Ethernet parser extracts Ethernet frame information
-2. IP parser extracts IP header information
-3. TCP parser works with parsed IP information to extract TCP fields
-
-**Future Layered Parsing Process**:
-1. **Ethernet Parsing**:
-   - Parse Ethernet frame header (14 bytes)
-   - Extract source and destination MAC addresses
-   - Identify EtherType to determine next layer protocol (IPv4, IPv6, ARP, etc.)
-
-2. **IP Parsing**:
-   - Parse IP header based on EtherType
-   - Extract source and destination IP addresses
-   - Determine transport layer protocol (TCP, UDP, ICMP, etc.)
-   - Calculate IP header length for payload offset
-
-3. **Transport Layer Parsing**:
-   - Parse TCP/UDP header based on IP protocol field
-   - Extract source and destination ports
-   - Parse protocol-specific fields (TCP flags, sequence numbers, etc.)
-
-4. **Application Layer Parsing** (Optional):
-   - Parse application layer data when available
-   - Handle protocol-specific parsing (HTTP headers, DNS records, etc.)
-
 **Key Interfaces**:
 ```cpp
 class IProtocolParser {
@@ -160,6 +124,27 @@ public:
 - `TCPParser`: Transport layer TCP parsing
 - `UDPParser`: Transport layer UDP parsing
 - `ProtocolManager`: Orchestrates layered parsing
+
+**Layered Parsing Process**:
+1. **Ethernet Parsing**:
+   - Parse Ethernet frame header (14 bytes)
+   - Extract source and destination MAC addresses
+   - Identify EtherType to determine next layer protocol (IPv4, IPv6, ARP, etc.)
+
+2. **IP Parsing**:
+   - Parse IP header based on EtherType
+   - Extract source and destination IP addresses
+   - Determine transport layer protocol (TCP, UDP, ICMP, etc.)
+   - Calculate IP header length for payload offset
+
+3. **Transport Layer Parsing**:
+   - Parse TCP/UDP header based on IP protocol field
+   - Extract source and destination ports
+   - Parse protocol-specific fields (TCP flags, sequence numbers, etc.)
+
+4. **Application Layer Parsing** (Optional):
+   - Parse application layer data when available
+   - Handle protocol-specific parsing (HTTP headers, DNS records, etc.)
 
 **Data Structures**:
 ```cpp
@@ -235,7 +220,6 @@ public:
     void shutdown();
     void reloadConfiguration();
     SystemStats getStatistics() const;
-    SystemStats getStatistics() const;
 };
 ```
 
@@ -274,7 +258,7 @@ sequenceDiagram
 ## Configuration Management
 
 **Centralized Configuration Structure**:
-```yaml
+```
 ids:
   capture:
     interface: "eth0"

@@ -1,5 +1,5 @@
-#ifndef PARSING_TCP_PARSER_H
-#define PARSING_TCP_PARSER_H
+#ifndef PROTOCOLS_TCP_PARSER_H
+#define PROTOCOLS_TCP_PARSER_H
 
 #include "protocol_parser.h"
 #include <cstdint>

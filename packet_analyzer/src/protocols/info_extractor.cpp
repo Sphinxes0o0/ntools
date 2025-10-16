@@ -1,4 +1,4 @@
-#include "../../include/parsing/info_extractor.h"
+#include "../../include/protocols/info_extractor.h"
 #include <sstream>
 
 namespace ids {

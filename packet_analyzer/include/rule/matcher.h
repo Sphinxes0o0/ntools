@@ -1,9 +1,9 @@
-#ifndef MINIIDS_RULE_MATCHER_H
-#define MINIIDS_RULE_MATCHER_H
+#ifndef RULE_MATCHER_H
+#define RULE_MATCHER_H
 
+#include "../../include/protocols/packet.h"
 #include <vector>
 #include <memory>
-#include "../../include/parsing/packet.h"
 #include "ids/common.h"
 
 namespace ids {
@@ -69,4 +69,4 @@ private:
 
 } // namespace ids
 
-#endif // MINIIDS_RULE_MATCHER_H
+#endif // RULE_MATCHER_H

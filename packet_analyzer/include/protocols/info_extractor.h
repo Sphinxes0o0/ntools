@@ -1,5 +1,5 @@
-#ifndef MINIIDS_PARSING_INFO_EXTRACTOR_H
-#define MINIIDS_PARSING_INFO_EXTRACTOR_H
+#ifndef PROTOCOLS_INFO_EXTRACTOR_H
+#define PROTOCOLS_INFO_EXTRACTOR_H
 
 #include <string>
 #include <vector>
@@ -17,4 +17,4 @@ public:
 
 } // namespace ids
 
-#endif // MINIIDS_PARSING_INFO_EXTRACTOR_H
+#endif // PROTOCOLS_INFO_EXTRACTOR_H

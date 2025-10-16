@@ -1,8 +1,9 @@
 #include <iostream>
 #include <vector>
 #include <iomanip>
-#include "include/parsing/protocol_parser.h"
-#include "include/parsing/tcp_parser.h"
+#include <cstring>
+#include "include/protocols/protocol_parser.h"
+#include "include/protocols/tcp.h"
 
 // Sample TCP packet data (simplified HTTP request packet)
 uint8_t sample_tcp_packet[] = {

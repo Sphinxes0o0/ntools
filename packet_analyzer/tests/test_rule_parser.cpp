@@ -1,9 +1,6 @@
 #include <iostream>
-#include <string>
-#include <vector>
-#include "../include/parsing/rule_parser.h"
-#include "../src/core/config.h"
-#include "../include/utils/utils.h"
+#include <memory>
+#include "../include/rule/parser.h"
 
 using namespace ids;
 

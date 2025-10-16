@@ -1,8 +1,8 @@
 #ifndef PACKET_FORMATTER_H
 #define PACKET_FORMATTER_H
 
+#include "../protocols/packet.h"
 #include <string>
-#include "../parsing/packet.h"
 
 namespace ids {
 

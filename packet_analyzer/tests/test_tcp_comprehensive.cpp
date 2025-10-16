@@ -2,8 +2,8 @@
 #include <vector>
 #include <iomanip>
 #include <cstring>
-#include "include/parsing/protocol_parser.h"
-#include "include/parsing/tcp_parser.h"
+#include "include/protocols/protocol_parser.h"
+#include "include/protocols/tcp.h"
 
 void test_tcp_packet(const std::string& test_name, uint8_t* packet_data, size_t length, uint8_t tcp_flags) {
     std::cout << "\n=== " << test_name << " ===" << std::endl;

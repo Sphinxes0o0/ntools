@@ -1,5 +1,5 @@
-#ifndef PARSING_PROTOCOL_PARSER_H
-#define PARSING_PROTOCOL_PARSER_H
+#ifndef PROTOCOLS_PROTOCOL_PARSER_H
+#define PROTOCOLS_PROTOCOL_PARSER_H
 
 #include <string>
 #include <vector>

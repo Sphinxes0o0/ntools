@@ -52,7 +52,7 @@ graph TB
 class ICaptureModule {
 public:
     virtual bool initialize(const CaptureConfig& config) = 0;
-    virtual std::unique_ptr<Packet> capturePacket() = 0;
+    virtual Packet* capturePacket() = 0;
     virtual void shutdown() = 0;
     virtual ~ICaptureModule() = default;
 };
@@ -67,20 +67,27 @@ public:
 - Transport Layer: TCP, UDP
 - Application Layer: HTTP, DNS (basic)
 
-Current Implementation Status:
-The current implementation uses a simplified approach where parsers directly work on raw packets. 
-Each parser is responsible for identifying and parsing its specific protocol within the packet.
+The protocol parsing follows a strict layered approach where each layer is parsed independently:
 
-For example, the TCP parser currently:
-1. Checks if the packet contains an Ethernet frame
-2. Verifies the EtherType indicates an IPv4 packet
-3. Confirms the IP protocol field indicates TCP
-4. Parses the TCP header fields
+1. **Link Layer Parsing** (Ethernet):
+   - Parse Ethernet frame header
+   - Identify EtherType to determine next layer protocol
+   - Extract source and destination MAC addresses
 
-This approach will be refactored to follow a strict layered parsing model where:
-1. Ethernet parser extracts Ethernet frame information
-2. IP parser extracts IP header information
-3. TCP parser works with parsed IP information to extract TCP fields
+2. **Network Layer Parsing** (IP):
+   - Parse IP header based on EtherType
+   - Handle IPv4 and IPv6 separately
+   - Extract source and destination IP addresses
+   - Identify transport layer protocol (TCP/UDP/ICMP)
+
+3. **Transport Layer Parsing** (TCP/UDP):
+   - Parse TCP or UDP header based on IP protocol field
+   - Extract source and destination ports
+   - Handle protocol-specific fields (TCP flags, sequence numbers, etc.)
+
+4. **Application Layer Parsing** (Optional):
+   - Parse application layer data when available
+   - Handle protocol-specific parsing (HTTP headers, DNS records, etc.)
 
 **Plugin Architecture**:
 ```cpp

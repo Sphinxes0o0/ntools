@@ -1,10 +1,10 @@
-#ifndef MINIIDS_RULE_PARSER_H
-#define MINIIDS_RULE_PARSER_H
+#ifndef RULE_PARSER_H
+#define RULE_PARSER_H
 
+#include "../../include/protocols/packet.h"
 #include <string>
 #include <vector>
 #include <memory>
-#include "../../include/parsing/packet.h"
 
 namespace ids {
 
@@ -84,4 +84,4 @@ private:
 
 } // namespace ids
 
-#endif // MINIIDS_RULE_PARSER_H
+#endif // RULE_PARSER_H

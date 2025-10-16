@@ -21,8 +21,8 @@ set(SOURCES
     src/capture/factory.cpp
     src/utils/utils.cpp
     src/utils/packet_formatter.cpp
-    src/parsing/tcp.cpp
-    src/parsing/info_extractor.cpp
+    src/protocols/tcp.cpp
+    src/protocols/info_extractor.cpp
     src/rule/parser.cpp
     src/rule/matcher.cpp
 )

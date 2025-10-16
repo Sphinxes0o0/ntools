@@ -1,7 +1,7 @@
 #ifndef MINIIDS_CAPTURE_INTERFACE_H
 #define MINIIDS_CAPTURE_INTERFACE_H
 
-#include "../../include/parsing/packet.h"
+#include "../../include/protocols/packet.h"
 #include "../../include/ids/config.h"
 #include <memory>
 #include <string>

@@ -1,5 +1,5 @@
-#ifndef MINIIDS_CORE_PACKET_H
-#define MINIIDS_CORE_PACKET_H
+#ifndef PROTOCOLS_PACKET_H
+#define PROTOCOLS_PACKET_H
 
 #include "../../include/ids/common.h"
 #include <vector>
@@ -207,4 +207,4 @@ struct Packet {
 
 } // namespace ids
 
-#endif // MINIIDS_CORE_PACKET_H
+#endif // PROTOCOLS_PACKET_H

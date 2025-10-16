@@ -7,7 +7,7 @@
 
 #include "ids/config.h"
 #include "capture/factory.h"
-#include "parsing/tcp.h"
+#include "protocols/tcp.h"
 
 namespace ids {
 
