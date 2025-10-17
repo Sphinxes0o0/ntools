@@ -22,30 +22,56 @@ std::shared_ptr<Rule> RuleParser::parseRule(const std::string& rule_str) {
     }
 
     auto rule = std::make_shared<Rule>();
+    std::cout << "Parsing rule: " << rule_str << std::endl;
 
     try {
         // Tokenize the rule
         std::vector<std::string> tokens = tokenize(rule_str);
         if (tokens.size() < 7) {
             stats_["rules_invalid"]++;
+            std::cerr << "Invalid rule format: insufficient tokens" << std::endl;
             throw std::invalid_argument("Invalid rule format: insufficient tokens");
         }
 
         // Parse header
         if (!parseHeader(*rule, tokens)) {
             stats_["rules_invalid"]++;
+            std::cerr << "Failed to parse rule header" << std::endl;
             throw std::invalid_argument("Failed to parse rule header");
         }
+
+        std::cout << "Parsed header - Action: " << static_cast<int>(rule->action) 
+                  << ", Protocol: " << rule->protocol
+                  << ", Src IP: " << rule->src_ip << ", Src Port: " << rule->src_port
+                  << ", Direction: " << static_cast<int>(rule->direction)
+                  << ", Dst IP: " << rule->dst_ip << ", Dst Port: " << rule->dst_port << std::endl;
+
         // Find the options part (between parentheses)
         size_t open_paren = rule_str.find('(');
         size_t close_paren = rule_str.rfind(')');
         if (open_paren != std::string::npos && close_paren != std::string::npos && open_paren < close_paren) {
             std::string options_str = rule_str.substr(open_paren + 1, close_paren - open_paren - 1);
+            std::cout << "Parsing options: " << options_str << std::endl;
             if (!parseOptions(*rule, options_str)) {
                 stats_["rules_invalid"]++;
+                std::cerr << "Failed to parse rule options" << std::endl;
                 throw std::invalid_argument("Failed to parse rule options");
             }
         }
+
+        // 验证规则
+        if (!rule->validate()) {
+            stats_["rules_invalid"]++;
+            std::cerr << "Rule validation failed" << std::endl;
+            auto errors = rule->getValidationErrors();
+            for (const auto& error : errors) {
+                std::cerr << "  Validation error: " << error << std::endl;
+            }
+            throw std::invalid_argument("Rule validation failed");
+        }
+
+        std::cout << "Rule parsed successfully - ID: " << rule->id 
+                  << ", Description: " << rule->description << std::endl;
         stats_["rules_parsed"]++;
         return rule;
     } catch (const std::exception& e) {
@@ -57,31 +83,41 @@ std::shared_ptr<Rule> RuleParser::parseRule(const std::string& rule_str) {
 
 std::vector<std::shared_ptr<Rule>> RuleParser::parseRules(const std::vector<std::string>& rule_strings) {
     std::vector<std::shared_ptr<Rule>> rules;
+    std::cout << "Parsing " << rule_strings.size() << " rules" << std::endl;
+
     for (const auto& rule_str : rule_strings) {
         auto rule = parseRule(rule_str);
         if (rule) {
             rules.push_back(rule);
         }
     }
+
+    std::cout << "Successfully parsed " << rules.size() << " rules" << std::endl;
     return rules;
 }
 
 std::vector<std::shared_ptr<Rule>> RuleParser::parseRuleFile(const std::string& file_path) {
     std::vector<std::shared_ptr<Rule>> rules;
+    std::cout << "Parsing rule file: " << file_path << std::endl;
+
     std::ifstream file(file_path);
     if (!file.is_open()) {
         throw std::runtime_error("Cannot open rule file: " + file_path);
     }
-    
+
     std::string line;
+    int line_number = 0;
     while (std::getline(file, line)) {
+        line_number++;
+        std::cout << "Parsing line " << line_number << ": " << line << std::endl;
         auto rule = parseRule(line);
         if (rule) {
             rules.push_back(rule);
         }
     }
-    
+
     file.close();
+    std::cout << "Parsed " << rules.size() << " rules from file" << std::endl;
     return rules;
 }
 
@@ -106,6 +142,7 @@ bool RuleParser::parseHeader(Rule& rule, const std::vector<std::string>& tokens)
 
     std::string action_str = tokens[0];
     std::transform(action_str.begin(), action_str.end(), action_str.begin(), ::tolower);
+    std::cout << "Parsing action: " << action_str << std::endl;
 
     if (action_str == "alert") {
         rule.action = RuleAction::ALERT;
@@ -118,6 +155,7 @@ bool RuleParser::parseHeader(Rule& rule, const std::vector<std::string>& tokens)
     } else if (action_str == "reject") {
         rule.action = RuleAction::REJECT;
     } else {
+        std::cerr << "Invalid action: " << action_str << std::endl;
         return false; // Invalid action
     }
 
@@ -127,6 +165,7 @@ bool RuleParser::parseHeader(Rule& rule, const std::vector<std::string>& tokens)
     rule.src_port = tokens[3];
 
     std::string direction_str = tokens[4];
+    std::cout << "Parsing direction: " << direction_str << std::endl;
     if (direction_str == "->") {
         rule.direction = RuleDirection::UNIDIRECTIONAL;
     } else if (direction_str == "<>") {
@@ -134,28 +173,32 @@ bool RuleParser::parseHeader(Rule& rule, const std::vector<std::string>& tokens)
     } else if (direction_str == "<-") {
         rule.direction = RuleDirection::REVERSE;
     } else {
+        std::cerr << "Invalid direction: " << direction_str << std::endl;
         return false; // Invalid direction
     }
 
     rule.dst_ip = tokens[5];
     rule.dst_port = tokens[6];
-    
+
+    std::cout << "Header parsed successfully" << std::endl;
     return true;
 }
 
 bool RuleParser::parseOptions(Rule& rule, const std::string& options) {
     // Split options by semicolon
     std::vector<std::string> option_list = split(options, ';');
-    
+    std::cout << "Parsing " << option_list.size() << " options" << std::endl;
+
     for (const auto& option_str : option_list) {
         std::string trimmed_option = trim(option_str);
         if (!trimmed_option.empty()) {
+            std::cout << "Parsing option: " << trimmed_option << std::endl;
             if (!parseOption(rule, trimmed_option)) {
                 return false;
             }
         }
     }
-    
+
     return true;
 }
 
@@ -172,6 +215,7 @@ bool RuleParser::parseOption(Rule& rule, const std::string& option) {
     size_t colon_pos = option_content.find(':');
     if (colon_pos == std::string::npos) {
         // Option without value
+        std::cout << "Adding option without value: " << option_content << std::endl;
         rule.options.emplace_back(option_content, "", negated);
         return true;
     }
@@ -184,12 +228,15 @@ bool RuleParser::parseOption(Rule& rule, const std::string& option) {
         value = value.substr(1, value.length() - 2);
     }
 
+    std::cout << "Adding option: " << keyword << "=" << value << std::endl;
     rule.options.emplace_back(keyword, value, negated);
 
     if (keyword == "msg") {
         rule.description = value;
+        std::cout << "Set rule description: " << rule.description << std::endl;
     } else if (keyword == "sid") {
         rule.id = value;
+        std::cout << "Set rule ID: " << rule.id << std::endl;
     }
 
     return true;
@@ -229,7 +276,7 @@ std::vector<std::string> RuleParser::tokenize(const std::string& rule_str) const
     while (ss >> token) {
         tokens.push_back(token);
     }
-    
+
     return tokens;
 }
 

@@ -408,7 +408,6 @@ ids:
     
   rules:
     rule_files:
-      - "/etc/ids/rules/local.rules"
     auto_reload: true
     reload_interval: 300  # seconds
     

@@ -6,9 +6,6 @@
 #include "packetio/factory.h"
 #include "protocols/packet.h"
 #include "protocols/protocol_parser.h"
-#include "protocols/ethernet.h"
-#include "protocols/ip.h"
-#include "protocols/tcp.h"
 #include "rule/parser.h"
 #include "rule/matcher.h"
 #include <memory>
@@ -48,6 +45,9 @@ private:
     bool initializeModules();
     void loadRules();
     std::vector<ParsingResult> parsePacket(const Packet& packet);
+    ParsingResult parseEthernetLayer(const Packet& packet);
+    ParsingResult parseIPLayer(const Packet& packet);
+    ParsingResult parseTransportLayer(const Packet& packet);
     void captureLoop();
     void processPacket(const Packet& packet);
 };

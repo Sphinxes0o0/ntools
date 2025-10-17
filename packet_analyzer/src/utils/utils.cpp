@@ -348,7 +348,7 @@ void printUsage(const char* program_name) {
     std::cout << "Usage: " << program_name << " [OPTIONS]\n"
               << "IDS - Intrusion Detection System\n\n"
               << "Options:\n"
-              << "  -c, --config FILE       Configuration file path (default: /etc/ids/ids.yaml)\n"
+              << "  -c, --config FILE       Configuration file path (default: ./ids.yaml)\n"
               << "  -i, --interface IF      Network interface to monitor (overrides config)\n"
               << "  -r, --rules FILE        Rule file path (can be specified multiple times)\n"
               << "  -l, --log-level LEVEL   Log level (DEBUG, INFO, WARNING, ERROR, ALERT)\n"

@@ -3,7 +3,6 @@
 #include <iomanip>
 #include <arpa/inet.h>
 
-// 显式声明网络字节序转换函数（增加兼容性）
 extern "C" {
     uint32_t ntohl(uint32_t netlong);
     uint16_t ntohs(uint16_t netshort);

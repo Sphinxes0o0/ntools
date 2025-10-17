@@ -66,7 +66,7 @@ void setupStandardSignalHandlers(SignalHandler handler);
  * @brief Structure to hold command line options
  */
 struct CommandLineOptions {
-    std::string config_file = "/etc/ids/ids.yaml";
+    std::string config_file = "";
     std::string interface;
     std::vector<std::string> rule_files;
     std::string log_level;

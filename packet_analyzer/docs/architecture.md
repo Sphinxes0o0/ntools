@@ -190,9 +190,7 @@ ids:
     
   rules:
     rule_files:
-      - "/etc/ids/rules/local.rules"
-      - "/etc/ids/rules/community.rules"
-    
+
   protocols:
     enabled:
       - "ethernet"

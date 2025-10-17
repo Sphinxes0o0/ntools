@@ -12,9 +12,9 @@ void testRuleParser() {
     
     // Test parsing the example rule from local.rules
     std::string test_rule = R"(alert tcp any any -> any any (msg:"Suricata: High TCP connection frequency from same source IP"; flow:established,to_server; threshold:type threshold,track by_src,count 10,seconds 60; classtype: network-scan; sid:1000001; rev:1;))";
-    
+
     std::cout << "Parsing rule: " << test_rule << std::endl;
-    
+
     try {
         Rule parsed_rule = parser.parseRule(test_rule);
         

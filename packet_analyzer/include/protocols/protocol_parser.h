@@ -10,24 +10,27 @@
 
 namespace ids {
 
-// Protocol types supported by the system
+/**
+ * @brief Protocol types following IANA assigned numbers
+ * @see https://www.iana.org/assignments/protocol-numbers/protocol-numbers.xhtml
+ */
 enum class ProtocolType {
     UNKNOWN = 0,
-    ETHERNET = 1,
-    IP = 2,
-    TCP = 3,
-    UDP = 4,
-    ICMP = 5,
-    ARP = 6,
-    HTTP = 7,
-    DNS = 8,
-    DHCP = 9,
-    FTP = 10,
-    SMTP = 11,
-    POP3 = 12,
-    IMAP = 13,
-    SSL = 14,
-    TLS = 15
+    ETHERNET = 1,  // Custom value for Ethernet layer
+    IP = 2,        // Custom value for IP layer
+    ICMP = 1,
+    TCP = 6,
+    UDP = 17,
+    ARP = 63,      // Custom value for ARP (not in IANA standard)
+    HTTP = 80,     // Custom value for HTTP (not in IANA standard)
+    DNS = 53,      // Custom value for DNS (not in IANA standard)
+    DHCP = 67,     // Using BOOTP/DHCP value
+    FTP = 21,      // Custom value for FTP (not in IANA standard)
+    SMTP = 25,     // Custom value for SMTP (not in IANA standard)
+    POP3 = 110,    // Custom value for POP3 (not in IANA standard)
+    IMAP = 143,    // Custom value for IMAP (not in IANA standard)
+    SSL = 443,     // Using HTTPS/SSL value
+    TLS = 12345    // Custom value for TLS (not in IANA standard)
 };
 
 // Structure to hold parsing results with detailed findings
