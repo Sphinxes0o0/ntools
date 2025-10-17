@@ -20,7 +20,7 @@ ids:
     
   rules:
     rule_files:
-      - /home/sphinx/workspace/ntools/packet_analyzer/config/rules/local.rules
+      0: /home/sphinx/workspace/ntools/packet_analyzer/config/rules/local.rules
     auto_reload: true
     reload_interval: 300
 

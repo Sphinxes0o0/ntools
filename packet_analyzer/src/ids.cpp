@@ -68,80 +68,103 @@ void IDS::initializeProtocolParsers() {
 
 void IDS::loadRules() {
     std::cout << "Loading rules..." << std::endl;
+    std::vector<std::string> rule_files;
 
     try {
-        std::vector<std::string> rule_files = 
-            config_.get<std::vector<std::string>>("ids.rules.rule_files", std::vector<std::string>());
-        std::cout << "Found " << rule_files.size() << " rule files in configuration" << std::endl;
-        std::vector<std::string> all_rule_strings;
+        // First check if the key exists
+        if (config_.hasKey("ids.rules.rule_files")) {
+            // The config system stores arrays with numeric indices
+            // Let's try to get the first few rule files (up to 10)
+            for (int i = 0; i < 10; i++) {
+                std::string key = "ids.rules.rule_files." + std::to_string(i);
+                if (config_.hasKey(key)) {
+                    std::string rule_file = config_.get<std::string>(key, "");
+                    if (!rule_file.empty()) {
+                        rule_files.push_back(rule_file);
+                        std::cout << "Found rule file: " << rule_file << std::endl;
+                    }
+                } else {
+                    // If this index doesn't exist, we've probably reached the end
+                    break;
+                }
+            }
+        }
+    } catch (const std::exception& e) {
+        std::cerr << "Error reading rule files from config: " << e.what() << std::endl;
+    }
 
-        for (const auto& rule_file : rule_files) {
-            std::cout << "Loading rules from file: " << rule_file << std::endl;
+    std::cout << "Found " << rule_files.size() << " rule files in configuration" << std::endl;
+    std::vector<std::string> all_rule_strings;
 
-            std::ifstream file(rule_file);
-            if (!file.is_open()) {
-                std::cerr << "Warning: Cannot open rule file: " << rule_file << std::endl;
+    // Load rules from each file
+    for (const auto& rule_file : rule_files) {
+        std::cout << "Loading rules from file: " << rule_file << std::endl;
+        std::ifstream file(rule_file);
+        if (!file.is_open()) {
+            std::cerr << "Warning: Cannot open rule file: " << rule_file << std::endl;
+            continue;
+        }
+
+        std::string line;
+        std::vector<std::string> rule_strings;
+        std::string multi_line_rule;
+        bool in_multiline_rule = false;
+
+        while (std::getline(file, line)) {
+            // Skip empty lines and comments
+            if (line.empty() || line[0] == '#' || (line[0] == '/' && line[1] == '/')) {
                 continue;
             }
 
-            std::string line;
-            std::vector<std::string> rule_strings;
-            std::string multi_line_rule;
-            bool in_multiline_rule = false;
+            // Trim whitespace from the beginning and end of the line
+            line.erase(0, line.find_first_not_of(" \t"));
+            line.erase(line.find_last_not_of(" \t") + 1);
 
-            while (std::getline(file, line)) {
-                // Skip empty lines and comments
-                if (line.empty() || line[0] == '#' || (line[0] == '/' && line[1] == '/')) {
-                    continue;
+            // Handle multi-line rules
+            if (in_multiline_rule) {
+                multi_line_rule += " " + line;
+                if (line.find(')') != std::string::npos) {
+                    rule_strings.push_back(multi_line_rule);
+                    multi_line_rule.clear();
+                    in_multiline_rule = false;
                 }
-
-                // Trim whitespace from the beginning and end of the line
-                line.erase(0, line.find_first_not_of(" \t"));
-                line.erase(line.find_last_not_of(" \t") + 1);
-
-                // Handle multi-line rules
-                if (in_multiline_rule) {
-                    multi_line_rule += " " + line;
-                    if (line.find(')') != std::string::npos) {
-                        rule_strings.push_back(multi_line_rule);
-                        multi_line_rule.clear();
-                        in_multiline_rule = false;
-                    }
-                } else if (line.find('(') != std::string::npos && line.find(')') == std::string::npos) {
-                    multi_line_rule = line;
-                    in_multiline_rule = true;
-                } else {
-                    // Single line rule
-                    if (!line.empty()) {
-                        rule_strings.push_back(line);
-                    }
+            } else if (line.find('(') != std::string::npos && line.find(')') == std::string::npos) {
+                multi_line_rule = line;
+                in_multiline_rule = true;
+            } else {
+                // Single line rule
+                if (!line.empty()) {
+                    rule_strings.push_back(line);
                 }
             }
-
-            // Handle case where file ends with an unclosed multiline rule
-            if (in_multiline_rule && !multi_line_rule.empty()) {
-                std::cerr << "Warning: Unclosed multiline rule in file: " << rule_file << std::endl;
-            }
-
-            file.close();
-
-            std::cout << "Loaded " << rule_strings.size() << " rules from " << rule_file << std::endl;
-            all_rule_strings.insert(all_rule_strings.end(), rule_strings.begin(), rule_strings.end());
         }
 
-        std::cout << "Parsing " << all_rule_strings.size() << " rules" << std::endl;
-        auto rules = rule_parser_->parseRules(all_rule_strings);
-        rule_matcher_.addRules(rules);
-        std::cout << "Loaded " << rules.size() << " rules" << std::endl;
-        std::cout << "Rule matcher now contains " << rule_matcher_.size() << " rules" << std::endl;
-    } catch (const std::exception& e) {
-        std::cerr << "Error loading rules: " << e.what() << std::endl;
+        // Handle case where file ends with an unclosed multiline rule
+        if (in_multiline_rule && !multi_line_rule.empty()) {
+            std::cerr << "Warning: Unclosed multiline rule in file: " << rule_file << std::endl;
+            // Add it anyway
+            rule_strings.push_back(multi_line_rule);
+        }
+
+        file.close();
+        std::cout << "Loaded " << rule_strings.size() << " rules from " << rule_file << std::endl;
+        all_rule_strings.insert(all_rule_strings.end(), rule_strings.begin(), rule_strings.end());
     }
+
+    if (all_rule_strings.empty()) {
+        std::cout << "No rules loaded from files, using default example rules" << std::endl;
+    }
+
+    std::cout << "Parsing " << all_rule_strings.size() << " rules" << std::endl;
+    auto rules = rule_parser_->parseRules(all_rule_strings);
+    rule_matcher_.addRules(rules);
+
+    std::cout << "Loaded " << rules.size() << " rules" << std::endl;
+    std::cout << "Rule matcher now contains " << rule_matcher_.size() << " rules" << std::endl;
 }
 
 bool IDS::initializeModules() {
     std::cout << "Initializing modules..." << std::endl;
-
     std::string capture_type = config_.get<std::string>("capture.type", "af_packet");
     capture_module_ = Factory::create(capture_type);
 

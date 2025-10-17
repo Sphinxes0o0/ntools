@@ -56,23 +56,23 @@ std::vector<RuleMatch> RuleMatcher::match(const Packet& packet) const {
                         std::cout << "  Protocol mismatch: rule=" << rule->protocol << ", packet=" << (protocol == 6 ? "tcp" : "udp") << std::endl;
                         continue;
                     }
-                    
+
                     // Check source IP
                     if (!rule->matchesIP(rule->src_ip, src_ip)) {
                         std::cout << "  Source IP mismatch: rule=" << rule->src_ip << ", packet=" << src_ip_str << std::endl;
                         continue;
                     }
-                    
+
                     // Check destination IP
                     if (!rule->matchesIP(rule->dst_ip, dst_ip)) {
                         std::cout << "  Destination IP mismatch: rule=" << rule->dst_ip << ", packet=" << dst_ip_str << std::endl;
                         continue;
                     }
-                    
+
                     // Parse rule ports to numeric values
                     uint16_t rule_src_port = 0;
                     uint16_t rule_dst_port = 0;
-                    
+
                     try {
                         if (rule->src_port != "any") {
                             rule_src_port = static_cast<uint16_t>(std::stoi(rule->src_port));
@@ -85,19 +85,19 @@ std::vector<RuleMatch> RuleMatcher::match(const Packet& packet) const {
                         std::cout << "  Invalid port in rule" << std::endl;
                         continue;
                     }
-                    
+
                     // Check source port
                     if (rule_src_port != 0 && !rule->matchesPort(rule_src_port, src_port)) {
                         std::cout << "  Source port mismatch: rule=" << rule->src_port << ", packet=" << src_port << std::endl;
                         continue;
                     }
-                    
+
                     // Check destination port
                     if (rule_dst_port != 0 && !rule->matchesPort(rule_dst_port, dst_port)) {
                         std::cout << "  Destination port mismatch: rule=" << rule->dst_port << ", packet=" << dst_port << std::endl;
                         continue;
                     }
-                    
+
                     std::cout << "  Rule matched: " << rule->id << " - " << rule->description << std::endl;
                     matches.emplace_back(rule.get(), 1.0); // Confidence score of 1.0 for exact match
                 }
@@ -108,41 +108,41 @@ std::vector<RuleMatch> RuleMatcher::match(const Packet& packet) const {
                                     static_cast<uint16_t>(udp_data[1]);
                 uint16_t dst_port = (static_cast<uint16_t>(udp_data[2]) << 8) | 
                                     static_cast<uint16_t>(udp_data[3]);
-                
+
                 std::cout << "Transport: SrcPort=" << src_port 
                           << ", DstPort=" << dst_port << std::endl;
-                
+
                 // Now match against all rules
                 for (const auto& rule : rules_) {
                     std::cout << "Checking rule: " << rule->id << " - " << rule->description << std::endl;
-                    
+
                     // Check protocol
                     if (!rule->matchesProtocol(protocol == 17 ? "udp" : "tcp")) {
                         std::cout << "  Protocol mismatch: rule=" << rule->protocol << ", packet=" << (protocol == 17 ? "udp" : "tcp") << std::endl;
                         continue;
                     }
-                    
+
                     // Check source IP
                     if (!rule->matchesIP(rule->src_ip, src_ip)) {
                         std::cout << "  Source IP mismatch: rule=" << rule->src_ip << ", packet=" << src_ip_str << std::endl;
                         continue;
                     }
-                    
+
                     // Check destination IP
                     if (!rule->matchesIP(rule->dst_ip, dst_ip)) {
                         std::cout << "  Destination IP mismatch: rule=" << rule->dst_ip << ", packet=" << dst_ip_str << std::endl;
                         continue;
                     }
-                    
+
                     // Parse rule ports to numeric values
                     uint16_t rule_src_port = 0;
                     uint16_t rule_dst_port = 0;
-                    
+
                     try {
                         if (rule->src_port != "any") {
                             rule_src_port = static_cast<uint16_t>(std::stoi(rule->src_port));
                         }
-                        
+
                         if (rule->dst_port != "any") {
                             rule_dst_port = static_cast<uint16_t>(std::stoi(rule->dst_port));
                         }
@@ -150,7 +150,7 @@ std::vector<RuleMatch> RuleMatcher::match(const Packet& packet) const {
                         std::cout << "  Invalid port in rule" << std::endl;
                         continue;
                     }
-                    
+
                     // Check source port
                     if (rule_src_port != 0 && !rule->matchesPort(rule_src_port, src_port)) {
                         std::cout << "  Source port mismatch: rule=" << rule->src_port << ", packet=" << src_port << std::endl;
@@ -162,7 +162,7 @@ std::vector<RuleMatch> RuleMatcher::match(const Packet& packet) const {
                         std::cout << "  Destination port mismatch: rule=" << rule->dst_port << ", packet=" << dst_port << std::endl;
                         continue;
                     }
-                    
+
                     std::cout << "  Rule matched: " << rule->id << " - " << rule->description << std::endl;
                     matches.emplace_back(rule.get(), 1.0); // Confidence score of 1.0 for exact match
                 }
@@ -170,35 +170,31 @@ std::vector<RuleMatch> RuleMatcher::match(const Packet& packet) const {
         } else {
             // Non-TCP/UDP protocols
             std::cout << "Non-TCP/UDP protocol: " << static_cast<int>(protocol) << std::endl;
-            
+
             // Match against rules without port checking
             for (const auto& rule : rules_) {
                 std::cout << "Checking rule: " << rule->id << " - " << rule->description << std::endl;
-                
                 // Check protocol
                 if (!rule->matchesProtocol("ip")) {
                     std::cout << "  Protocol mismatch: rule=" << rule->protocol << ", packet=ip" << std::endl;
                     continue;
                 }
-                
                 // Check source IP
                 if (!rule->matchesIP(rule->src_ip, src_ip)) {
                     std::cout << "  Source IP mismatch: rule=" << rule->src_ip << ", packet=" << src_ip_str << std::endl;
                     continue;
                 }
-                
                 // Check destination IP
                 if (!rule->matchesIP(rule->dst_ip, dst_ip)) {
                     std::cout << "  Destination IP mismatch: rule=" << rule->dst_ip << ", packet=" << dst_ip_str << std::endl;
                     continue;
                 }
-                
                 std::cout << "  Rule matched: " << rule->id << " - " << rule->description << std::endl;
                 matches.emplace_back(rule.get(), 1.0); // Confidence score of 1.0 for exact match
             }
         }
     }
-    
+
     std::cout << "Matched " << matches.size() << " rules" << std::endl;
     return matches;
 }
