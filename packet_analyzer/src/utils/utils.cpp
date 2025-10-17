@@ -103,7 +103,7 @@ bool isMulticastMAC(const uint8_t mac[6]) {
 }
 
 bool isValidPort(uint16_t port) {
-    return port > 0 && port <= 65535;
+    return port > 0;  // uint16_t is always <= 65535
 }
 
 bool isWellKnownPort(uint16_t port) {

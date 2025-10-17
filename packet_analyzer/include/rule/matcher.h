@@ -2,14 +2,11 @@
 #define RULE_MATCHER_H
 
 #include "../../include/protocols/packet.h"
+#include "../../include/rule/rule.h"
 #include <vector>
 #include <memory>
-#include "ids/common.h"
 
 namespace ids {
-
-// Forward declarations
-class Rule;
 
 /**
  * @brief Matches packets against a set of rules
@@ -36,7 +33,7 @@ public:
      * @param packet The packet to match
      * @return Vector of matched rules
      */
-    std::vector<std::shared_ptr<Rule>> match(const Packet& packet) const;
+    std::vector<RuleMatch> match(const Packet& packet) const;
     
     /**
      * @brief Match a packet against rules of a specific action type
@@ -44,7 +41,7 @@ public:
      * @param action The action type to filter by
      * @return Vector of matched rules with specified action
      */
-    std::vector<std::shared_ptr<Rule>> match(const Packet& packet, RuleAction action) const;
+    std::vector<RuleMatch> match(const Packet& packet, RuleAction action) const;
     
     /**
      * @brief Get all rules

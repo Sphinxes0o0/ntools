@@ -7,31 +7,13 @@ namespace ids {
 TCPParser::TCPParser() = default;
 
 bool TCPParser::can_parse(const std::vector<uint8_t>& packet_data) const {
-    // 检查数据包是否足够长以包含以太网和IP头部
-    if (packet_data.size() < 34) { // 14 (Ethernet) + 20 (最小IP头部)
+    // For layered parsing, TCP parser should only check if it can parse TCP data
+    // We assume the packet_data starts at the TCP header (after Ethernet and IP headers)
+    // Minimal TCP header is 20 bytes
+    if (packet_data.size() < 20) {
         return false;
     }
-    
-    // 检查是否为IPv4数据包
-    uint16_t ether_type = (packet_data[12] << 8) | packet_data[13];
-    if (ether_type != 0x0800) { // IPv4
-        return false;
-    }
-    
-    // 检查IP协议是否为TCP (协议号6)
-    uint8_t ip_protocol = packet_data[23];
-    if (ip_protocol != 6) {
-        return false;
-    }
-    
-    // 检查数据包是否包含TCP头部 (最小20字节)
-    uint8_t ip_header_length = (packet_data[14] & 0x0F) * 4;
-    size_t tcp_offset = 14 + ip_header_length;
-    
-    if (packet_data.size() < tcp_offset + 20) {
-        return false;
-    }
-    
+
     return true;
 }
 
@@ -42,41 +24,24 @@ ParsingResult TCPParser::parse(const std::vector<uint8_t>& packet_data) {
         result.description = "Invalid or incomplete TCP packet";
         return result;
     }
-    
-    // 计算TCP头部偏移量
-    uint8_t ip_header_length = (packet_data[14] & 0x0F) * 4;
-    size_t tcp_offset = 14 + ip_header_length;
-    
-    // 解析TCP头部
-    TCPHeader tcp_header = parse_tcp_header(packet_data.data() + tcp_offset);
-    
-    // 标记解析结果为有效
+
+    TCPHeader tcp_header = parse_tcp_header(packet_data.data());
+
     result.is_valid = true;
-    
-    // 构建描述信息
-    std::stringstream ss;
-    ss << "TCP " << tcp_header.src_port << " -> " << tcp_header.dst_port;
-    result.description = ss.str();
-    
-    // 添加详细信息到findings
+    result.description = "TCP";
     result.findings.emplace_back("Source Port", std::to_string(tcp_header.src_port));
     result.findings.emplace_back("Destination Port", std::to_string(tcp_header.dst_port));
     result.findings.emplace_back("Sequence Number", std::to_string(tcp_header.seq_number));
     result.findings.emplace_back("Acknowledgment Number", std::to_string(tcp_header.ack_number));
     result.findings.emplace_back("Header Length", std::to_string(tcp_header.data_offset * 4) + " bytes");
-    
-    // 解析并添加标志位信息
+
     TCPFlags flags = parse_tcp_flags(tcp_header.flags);
     result.findings.emplace_back("Flags", format_flags(flags));
-    
     result.findings.emplace_back("Window Size", std::to_string(tcp_header.window_size));
-    
     std::stringstream checksum_ss;
     checksum_ss << "0x" << std::uppercase << std::hex << std::setfill('0') << std::setw(4) << tcp_header.checksum;
     result.findings.emplace_back("Checksum", checksum_ss.str());
-    
     result.findings.emplace_back("Urgent Pointer", std::to_string(tcp_header.urgent_pointer));
-    
     return result;
 }
 

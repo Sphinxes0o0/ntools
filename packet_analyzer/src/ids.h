@@ -6,8 +6,11 @@
 #include "packetio/factory.h"
 #include "protocols/packet.h"
 #include "protocols/protocol_parser.h"
+#include "protocols/ethernet.h"
+#include "protocols/ip.h"
+#include "protocols/tcp.h"
+#include "rule/parser.h"
 #include "rule/matcher.h"
-#include "utils/packet_formatter.h"
 #include <memory>
 #include <string>
 #include <atomic>
@@ -34,15 +37,16 @@ private:
     std::unique_ptr<ICaptureModule> capture_module_;
     std::vector<std::unique_ptr<ProtocolParser>> protocol_parsers_;
     RuleMatcher rule_matcher_;
+    std::unique_ptr<RuleParser> rule_parser_;
     Config config_;
     std::atomic<bool> running_;
     std::atomic<bool> paused_;
     std::atomic<bool> shutdown_called_;
     std::chrono::steady_clock::time_point start_time_;
     std::thread capture_thread_;
-    
     void initializeProtocolParsers();
     bool initializeModules();
+    void loadRules();
     std::vector<ParsingResult> parsePacket(const Packet& packet);
     void captureLoop();
     void processPacket(const Packet& packet);

@@ -2,6 +2,7 @@
 #include "packetio/factory.h"
 #include "protocols/protocol_parser.h"
 #include "protocols/tcp.h"
+#include "ids/config.h"
 #include <iostream>
 #include <csignal>
 #include <cstring>
@@ -9,11 +10,18 @@
 #include <thread>
 #include <memory>
 
-#include "ids/config.h"
-
 namespace ids {
 
+static volatile bool g_running = true;
 static IDS* g_instance = nullptr;
+
+void signalHandler(int signal) {
+    std::cout << "\nReceived signal " << signal << ", shutting down...\n";
+    g_running = false;
+    if (g_instance) {
+        g_instance->shutdown();
+    }
+}
 
 IDS::IDS() 
     : running_(false), paused_(false), shutdown_called_(false),
@@ -27,6 +35,10 @@ IDS::~IDS() {
 }
 
 bool IDS::initialize(const std::string& config_file) {
+    // Set up signal handlers
+    signal(SIGINT, signalHandler);
+    signal(SIGTERM, signalHandler);
+    
     try {
         Config config;
         if (!config.loadFromFile(config_file)) {
@@ -48,6 +60,13 @@ bool IDS::initialize(const Config& config) {
         // Initialize protocol parsers
         initializeProtocolParsers();
         
+        // Initialize rule components
+        rule_parser_ = std::make_unique<RuleParser>();
+        // rule_matcher_ is already declared in the class
+        
+        // Load rules
+        loadRules();
+        
         // Initialize capture module and other components
         if (!initializeModules()) {
             std::cerr << "Failed to initialize modules" << std::endl;
@@ -63,9 +82,22 @@ bool IDS::initialize(const Config& config) {
 }
 
 void IDS::initializeProtocolParsers() {
-    // For now, just add TCP parser
-    // In a full implementation, we would initialize parsers based on config
+    protocol_parsers_.push_back(std::make_unique<EthernetParser>());
+    protocol_parsers_.push_back(std::make_unique<IPParser>());
     protocol_parsers_.push_back(std::make_unique<TCPParser>());
+}
+
+void IDS::loadRules() {
+    // Example of loading rules - in a real implementation this would load from files
+    std::vector<std::string> rule_strings = {
+        "alert tcp any any -> any any (msg:\"Test rule\"; sid:1000001; rev:1;)",
+        "drop tcp any any -> any 80 (msg:\"Block HTTP\"; sid:1000002; rev:1;)"
+    };
+
+    auto rules = rule_parser_->parseRules(rule_strings);
+    rule_matcher_.addRules(rules);
+
+    std::cout << "Loaded " << rules.size() << " rules" << std::endl;
 }
 
 bool IDS::initializeModules() {
@@ -96,24 +128,24 @@ void IDS::run() {
     capture_config.snaplen = config_.get<int>("capture.snaplen", 65535);
     capture_config.promiscuous = config_.get<bool>("capture.promiscuous", true);
     capture_config.filter = config_.get<std::string>("capture.filter", "");
-    
+
     if (capture_module_ && !capture_module_->initialize(capture_config)) {
         std::cerr << "Failed to initialize capture module" << std::endl;
         return;
     }
 
-    while (running_) {
+    while (running_ && g_running) {
         // 1. capture packet
         std::unique_ptr<Packet> packet = nullptr;
         if (capture_module_) {
             packet = capture_module_->capturePacket();
         }
-        
+
         // 2. process packet
         if (packet) {
             processPacket(*packet);
         }
-        
+
         // Small delay to prevent busy waiting if no packet was captured
         if (!packet) {
             std::this_thread::sleep_for(std::chrono::milliseconds(1));
@@ -123,29 +155,64 @@ void IDS::run() {
 
 std::vector<ParsingResult> IDS::parsePacket(const Packet& packet) {
     std::vector<ParsingResult> results;
-    
+
+    // Start with the full packet data for Ethernet parsing
+    std::vector<uint8_t> current_data = packet.data;
+
     // Try each parser to see if it can parse the packet
     for (const auto& parser : protocol_parsers_) {
-        if (parser->can_parse(packet.data)) {
-            ParsingResult result = parser->parse(packet.data);
+        if (parser->can_parse(current_data)) {
+            ParsingResult result = parser->parse(current_data);
             if (result.is_valid) {
                 results.push_back(result);
+                // Update current_data for the next layer based on the protocol type
+                if (result.protocol_type == ProtocolType::ETHERNET) {
+                    // After parsing Ethernet, move to IP header (14 bytes offset)
+                    if (current_data.size() > 14) {
+                        // Check EtherType to determine next protocol
+                        uint16_t ether_type = (current_data[12] << 8) | current_data[13];
+                        if (ether_type == 0x0800) { // IPv4
+                            current_data = std::vector<uint8_t>(current_data.begin() + 14, current_data.end());
+                        } else {
+                            // For other types, we stop parsing
+                            break;
+                        }
+                    } else {
+                        break;
+                    }
+                } else if (result.protocol_type == ProtocolType::IP) {
+                    // After parsing IP, move to transport layer header
+                    if (!current_data.empty()) {
+                        uint8_t ihl = current_data[0] & 0x0F;
+                        uint8_t ip_header_length = ihl * 4;
+                        if (current_data.size() > ip_header_length) {
+                            // Move to transport layer (TCP/UDP/ICMP)
+                            current_data = std::vector<uint8_t>(current_data.begin() + ip_header_length, current_data.end());
+                        } else {
+                            break;
+                        }
+                    } else {
+                        break;
+                    }
+                } else {
+                    // For other protocols (TCP, UDP, etc.), we've reached the top of the stack
+                    break;
+                }
             }
         }
     }
-    
+
     return results;
 }
 
 void IDS::processPacket(const Packet& packet) {
     // 1. Parse packet with all applicable parsers
     std::vector<ParsingResult> parsing_results = parsePacket(packet);
-    
+
     // 2. Display parsing information
     if (!parsing_results.empty()) {
         for (const auto& result : parsing_results) {
             std::cout << "Protocol: " << result.description << std::endl;
-            
             // Display detailed findings
             for (const auto& finding : result.findings) {
                 std::cout << "  " << finding.first << ": " << finding.second << std::endl;
@@ -156,14 +223,14 @@ void IDS::processPacket(const Packet& packet) {
     }
 
     // 3. Match against rules
-    std::vector<std::shared_ptr<Rule>> matched_rules = rule_matcher_.match(packet);
+    std::vector<RuleMatch> matched_rules = rule_matcher_.match(packet);
 
     // 4. Process rule matches
     if (!matched_rules.empty()) {
         std::cout << "Matched " << matched_rules.size() << " rules:" << std::endl;
-        for (const auto& rule : matched_rules) {
+        for (const auto& match : matched_rules) {
             // In a real implementation, we would take actions based on rule
-            std::cout << "  Rule matched (action would be taken)" << std::endl;
+            std::cout << "  Rule matched: " << match.rule->description << " (action would be taken)" << std::endl;
         }
     }
 }
@@ -173,10 +240,8 @@ void IDS::shutdown() {
     if (shutdown_called_.exchange(true)) {
         return;
     }
-    
     std::cout << "Shutting down IDS..." << std::endl;
     running_ = false;
-    
     if (capture_module_) {
         capture_module_->shutdown();
     }

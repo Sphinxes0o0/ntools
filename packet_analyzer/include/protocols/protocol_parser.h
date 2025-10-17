@@ -102,7 +102,10 @@ public:
     virtual bool is_enabled() const { return true; }
     
     // Enable/disable parser
-    virtual void set_enabled(bool enabled) { /* Default implementation does nothing */ }
+    virtual void set_enabled(bool enabled) { 
+        // Default implementation does nothing 
+        (void)enabled; // Prevent unused parameter warning
+    }
     
     // Get minimum packet size required for parsing
     virtual size_t get_min_packet_size() const { return 0; }
